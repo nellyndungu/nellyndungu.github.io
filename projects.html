@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Projects</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    /* ===== Base ===== */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      line-height: 1.6;
+      background: #f9fafb;
+      color: #111;
+      max-width: 1200px;
+      margin: auto;
+      padding: 1rem;
+    }
+
+    header {
+      text-align: center;
+      padding: 2rem 1rem;
+    }
+    header h2 {
+      font-size: 2rem;
+      color: #103256;
+      margin-bottom: 0.5rem;
+    }
+    header p {
+      color: #555;
+    }
+
+    /* ===== Tiles Layout ===== */
+    .tiles {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+    .tile {
+      background: #fff;
+      border-radius: 10px;
+      padding: 1.2rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .tile:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .tile h3 {
+      margin-bottom: 0.5rem;
+      color: #103256;
+    }
+    .tile a {
+      text-decoration: none;
+      color: #0056b3;
+    }
+    .tile p {
+      font-size: 0.95rem;
+      color: #444;
+      margin-bottom: 0.5rem;
+    }
+    .tile small {
+      font-size: 0.8rem;
+      color: #777;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h2>Projects</h2>
+  </header>
+
+  <main class="tiles" id="projectsGrid"></main>
+
+  <script>
+    const username = "nellyndungu"; 
+    const projectsGrid = document.getElementById("projectsGrid");
+
+    fetch(`https://api.github.com/users/${username}/repos`)
+      .then(res => res.json())
+      .then(async repos => {
+        const pagesRepos = repos
+          .filter(r => r.has_pages && !r.fork)
+          .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+
+        if (pagesRepos.length === 0) {
+          projectsGrid.innerHTML = "<p>No projects found.</p>";
+          return;
+        }
+
+        for (const r of pagesRepos) {
+          // fetch README 
+          let readmeText = "";
+          try {
+            const readmeRes = await fetch(`https://api.github.com/repos/${username}/${r.name}/readme`, {
+              headers: { Accept: "application/vnd.github.v3.raw" }
+            });
+            if (readmeRes.ok) {
+              readmeText = await readmeRes.text();
+              readmeText = readmeText.split("\n")[0]; // use first line only
+            }
+          } catch (err) {
+            console.warn(`No README for ${r.name}`);
+          }
+
+          const updated = new Date(r.updated_at).toLocaleDateString();
+          const tile = document.createElement("div");
+          tile.className = "tile";
+          tile.innerHTML = `
+            <h3><a href="https://${username}.github.io/${r.name}/" target="_blank">${r.name}</a></h3>
+            <p>${readmeText || r.description || "No description provided."}</p>
+            <small>Author: ${r.owner.login} · Last updated: ${updated}</small>
+          `;
+          projectsGrid.appendChild(tile);
+        }
+      })
+      .catch(err => {
+        projectsGrid.innerHTML = "<p>Error loading projects.</p>";
+        console.error("Error fetching repos:", err);
+      });
+  </script>
+</body>
+</html>
